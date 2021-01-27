@@ -49,6 +49,7 @@ void dma_handler() {
     for (universe = 0; universe < 16; universe++) {
 
         // TESTING, only on universe 0
+        /*
         if (!universe) {
             // TEMPORARY: INcreasing counter on chan 0 and 509
             dmx_values[universe][0]++;
@@ -57,6 +58,7 @@ void dma_handler() {
             dmx_values[universe][1]--;
             dmx_values[universe][510]--;
         }
+        */
 
         // Usually, DMX needs a BREAK (LOW level) of at least 96µs before
         // MARK-AFTER-BREAK (MAB, HIGH LEVEL)

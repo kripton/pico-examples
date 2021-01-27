@@ -1,4 +1,5 @@
 add_executable(dmx16
+        dmahandler.c
         dmx16.c
         )
 

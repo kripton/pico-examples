@@ -29,108 +29,29 @@
 #include "hardware/irq.h"       // To control the data transfer from mem to pio
 #include "dmx16.pio.h"          // Header file for the PIO program
 
-int dma_chan;                     // The DMA channel we use to push data around
-uint8_t dmx_values[16][512];      // 16 universes with 512 byte each
-static uint16_t wavetable[5672];  // 16 universes (data type) with 5672 bit each
+#include "dmahandler.h"
 
-// Appends one bit to the wavetable for universe "universe" at the position
-// bitoffset. The offset will be increased by 1!
-void wavetable_write_bit(int universe, uint16_t* bitoffset, uint8_t value) {
-    if (!value) {
-        // Since initial value is 0, just increment the offset
-        (*bitoffset)++;
-        return;
-    }
-
-    wavetable[(*bitoffset)++] |= (1 << universe);
-};
-
-// Appends one byte (including on start and two stop bits) to the wavetable for
-// given universe at the given bit offset. This offset will be increased!
-void wavetable_write_byte(int universe, uint16_t* bitoffset, uint8_t value) {
-    // Start bit is 0
-    wavetable_write_bit(universe, bitoffset, 0);
-    // I assume LSB is first? At least it works :)
-    wavetable_write_bit(universe, bitoffset, (value >> 0) & 0x01);
-    wavetable_write_bit(universe, bitoffset, (value >> 1) & 0x01);
-    wavetable_write_bit(universe, bitoffset, (value >> 2) & 0x01);
-    wavetable_write_bit(universe, bitoffset, (value >> 3) & 0x01);
-    wavetable_write_bit(universe, bitoffset, (value >> 4) & 0x01);
-    wavetable_write_bit(universe, bitoffset, (value >> 5) & 0x01);
-    wavetable_write_bit(universe, bitoffset, (value >> 6) & 0x01);
-    wavetable_write_bit(universe, bitoffset, (value >> 7) & 0x01);
-
-    // Write two stop bits
-    wavetable_write_bit(universe, bitoffset, 1);
-    wavetable_write_bit(universe, bitoffset, 1);
-};
-
-// One transfer has finished, prepare the next DMX packet and restart the
-// DMA transfer
-void dma_handler() {
-    uint8_t universe;   // Loop over the 16 universes
-    uint16_t bitoffset; // Current bit offset inside current universe
-    uint16_t chan;      // Current channel in universe
-
-    // Drive the TRIGGER GPIO to HIGH
-    gpio_put(28, 1);
-
-    // Zero the wavetable
-    memset(wavetable, 0x00, 5672*2);
-
-    // Loop through all 16 universes
-    for (universe = 0; universe < 16; universe++) {
-
-        // TESTING
-        /*
-        if (!universe) {
-            // TEMPORARY: INcreasing counter on chan 0 of each universe
-            dmx_values[universe][509]++;
-            // TEMPORARY: DEcreasing counter on chan 1 of each universe
-            dmx_values[universe][510]--;
-        }
-        */
-
-        // The first 24 bit (96µs) are BREAK = LOW level
-        // Nothing to do since wavetable has been cleared to 0
-        // TODO: This could be shortened since we are on LOW already
-        //       and need around 3ms anyways to prepare the wavetable
-        bitoffset = 23;
-
-        // Write 4 bit MARK-AFTER-BREAK (16µs)
-        wavetable_write_bit(universe, &bitoffset, 1);
-        wavetable_write_bit(universe, &bitoffset, 1);
-        wavetable_write_bit(universe, &bitoffset, 1);
-        wavetable_write_bit(universe, &bitoffset, 1);
-
-        // Write the startbyte
-        wavetable_write_byte(universe, &bitoffset, 0);
-
-        // Write the data (channel values) from the buffer
-        for (chan = 0; chan < 512; chan++) {
-            wavetable_write_byte(universe, &bitoffset, dmx_values[universe][chan]);
-        }
-
-        // Go to a defined LOW at the end
-        wavetable_write_bit(universe, &bitoffset, 0);
-    }
-
-    // Clear the interrupt request.
-    dma_hw->ints0 = 1u << dma_chan;
-    // Give the channel a new wave table entry to read from, and re-trigger it
-    dma_channel_set_read_addr(dma_chan, wavetable, true);
-
-    // Drive the TRIGGER GPIO to LOW
-    gpio_put(28, 0);
-};
+#include <tusb.h>
 
 int main() {
     stdio_init_all();
 
+    // If you want the Pico to sit and wait until the CDC is connected, use this:
+    /*
+    gpio_init(25);
+    gpio_set_dir(25, GPIO_OUT);
+    int led_state = 0;
+    uint32_t t0 = time_us_32();
+    while (!tud_cdc_connected()) { sleep_ms(100); gpio_put(25, (led_state++) & 0x01); }
+    uint32_t t1 = time_us_32();
+    printf("HOST CONNECTED after \n%ldus\n", t1 - t0);
+    gpio_put(25, 1);
+    */
+
     // Set up our TRIGGER GPIO on GP28 and init it to LOW
-    gpio_init(28);
-    gpio_set_dir(28, GPIO_OUT);
-    gpio_put(28, 0);
+    gpio_init(PIN_TRIGGER);
+    gpio_set_dir(PIN_TRIGGER, GPIO_OUT);
+    gpio_put(PIN_TRIGGER, 0);
 
     // Set up a PIO state machine to serialise our bits at 250000 bit/s
     uint offset = pio_add_program(pio0, &dmx16_program);
@@ -150,7 +71,8 @@ int main() {
         &c,
         &pio0_hw->txf[0], // Write address (only need to set this once)
         NULL,             // Don't provide a read address yet
-        2836,             // Write one complete DMX packet, then halt and interrupt
+        WAVETABLE_LENGTH/2, // Write one complete DMX packet, then halt and interrupt
+                          // It's WAVETABLE_LENGTH/2 since we transfer 32 bit per transfer
         false             // Don't start yet
     );
 

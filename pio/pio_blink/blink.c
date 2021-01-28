@@ -21,7 +21,7 @@ int main() {
     printf("Loaded program at %d\n", offset);
 
     blink_pin_forever(pio, 0, offset, 0, 3);
-    blink_pin_forever(pio, 1, offset, 6, 4);
+    blink_pin_forever(pio, 1, offset, 25, 4); // was pin 6
     blink_pin_forever(pio, 2, offset, 11, 1);
 }
 

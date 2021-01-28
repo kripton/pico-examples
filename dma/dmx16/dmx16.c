@@ -33,20 +33,15 @@
 
 #include <tusb.h>
 
-int main() {
-    stdio_init_all();
+// Activity indication
+int led_state = 0;
 
-    // If you want the Pico to sit and wait until the CDC is connected, use this:
-    /*
+int main() {
     gpio_init(25);
     gpio_set_dir(25, GPIO_OUT);
-    int led_state = 0;
-    uint32_t t0 = time_us_32();
-    while (!tud_cdc_connected()) { sleep_ms(100); gpio_put(25, (led_state++) & 0x01); }
-    uint32_t t1 = time_us_32();
-    printf("HOST CONNECTED after \n%ldus\n", t1 - t0);
-    gpio_put(25, 1);
-    */
+
+
+    tusb_init();
 
     // Set up our TRIGGER GPIO on GP28 and init it to LOW
     gpio_init(PIN_TRIGGER);
@@ -89,6 +84,51 @@ int main() {
     // Everything else from this point is interrupt-driven. The processor has
     // time to sit and think about its early retirement -- maybe open a bakery?
     while (true) {
+        tud_task();
         tight_loop_contents();
     }
 };
+
+
+//--------------------------------------------------------------------+
+// USB HID
+//--------------------------------------------------------------------+
+
+// Invoked when received GET_REPORT control request
+// Application must fill buffer report's content and return its length.
+// Return zero will cause the stack to STALL request
+uint16_t tud_hid_get_report_cb(uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen) {
+    // TODO not Implemented
+    (void) report_id;
+    (void) report_type;
+    (void) buffer;
+    (void) reqlen;
+
+    return 0;
+}
+
+// Invoked when received SET_REPORT control request or
+// received data on OUT endpoint ( Report ID = 0, Type = 0 )
+void tud_hid_set_report_cb(uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t bufsize) {
+    // This example doesn't use multiple report and report ID
+    (void) report_id;
+    (void) report_type;
+
+    gpio_put(25, (led_state++) & 0x01);
+
+    // First byte in buffer: Command/Channel offset
+    // 0..15: DMX data (universe 0) at offset n*32
+    // 16: Set interface mode (Command + 1 byte)
+
+    if (buffer[0] < 16) {
+        // DMX data, universe 0
+        uint8_t datasize = 32;
+        if ((bufsize - 1) < datasize) {
+            datasize = bufsize - 1;
+        }
+        memcpy(dmx_values[0] + (32 * buffer[0]), buffer + 1, datasize);
+    }
+
+    // echo back anything we received from host
+    //tud_hid_report(0, buffer, bufsize);
+}

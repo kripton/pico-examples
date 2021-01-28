@@ -31,15 +31,27 @@
 
 #include "dmahandler.h"
 
+#include "bsp/board.h"          // LED timing
 #include <tusb.h>
 
-// Activity indication
-int led_state = 0;
+/* Blink pattern
+ * - 250 ms  : Sending DMX, universe 1-15 has one value != 0
+ * - 1000 ms : Sending DMX, universe 0 has one value != 0
+ * - 2500 ms : Sending DMX, all universes are zero
+ */
+enum {
+    BLINK_SENDING_ZERO         = 1000,
+    BLINK_SENDING_CONTENT_ONE  =  500,
+    BLINK_SENDING_CONTENT_MORE =  250,
+};
+
+static uint32_t blink_interval_ms = BLINK_SENDING_ZERO;
+
+void led_blinking_task(void);
 
 int main() {
     gpio_init(25);
     gpio_set_dir(25, GPIO_OUT);
-
 
     tusb_init();
 
@@ -85,7 +97,7 @@ int main() {
     // time to sit and think about its early retirement -- maybe open a bakery?
     while (true) {
         tud_task();
-        tight_loop_contents();
+        led_blinking_task();
     }
 };
 
@@ -114,8 +126,6 @@ void tud_hid_set_report_cb(uint8_t report_id, hid_report_type_t report_type, uin
     (void) report_id;
     (void) report_type;
 
-    gpio_put(25, (led_state++) & 0x01);
-
     // First byte in buffer: Command/Channel offset
     // 0..15: DMX data (universe 0) at offset n*32
     // 16: Set interface mode (Command + 1 byte)
@@ -128,4 +138,40 @@ void tud_hid_set_report_cb(uint8_t report_id, hid_report_type_t report_type, uin
         }
         memcpy(dmx_values[0] + (32 * buffer[0]), buffer + 1, datasize);
     }
+}
+
+//--------------------------------------------------------------------+
+// BLINKING TASK
+//--------------------------------------------------------------------+
+void led_blinking_task(void) {
+    // The following calculations take lots of time. However, this doesn't
+    // matter since the DMX updating is done via IRQ handler
+
+    // Check which blinking pattern to use
+    blink_interval_ms = BLINK_SENDING_ZERO;
+
+    // Check if first universe is all zero
+    for (uint16_t i = 0; i < 512; i++) {
+        if (dmx_values[0][i]) {
+            blink_interval_ms = BLINK_SENDING_CONTENT_ONE;
+        }
+    }
+    // Check the other universes
+    for (uint16_t j = 1; j < 16; j++) {
+        for (uint16_t i; i < 512; i++) {
+            if (dmx_values[j][i]) {
+                blink_interval_ms = BLINK_SENDING_CONTENT_MORE;
+            }
+        }
+    }
+
+    static uint32_t start_ms = 0;
+    static bool led_state = false;
+
+    // Blink every interval ms
+    if (board_millis() - start_ms < blink_interval_ms) return; // not enough time
+    start_ms += blink_interval_ms;
+
+    board_led_write(led_state);
+    led_state = 1 - led_state; // toggle
 }

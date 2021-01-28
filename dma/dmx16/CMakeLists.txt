@@ -12,6 +12,7 @@ target_link_libraries(dmx16
         pico_stdlib
         pico_mem_ops
         tinyusb_device
+        tinyusb_board
         hardware_dma
         hardware_irq
         hardware_pio

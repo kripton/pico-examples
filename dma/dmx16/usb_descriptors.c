@@ -70,7 +70,7 @@ uint8_t const *tud_descriptor_device_cb(void) {
 //--------------------------------------------------------------------+
 // HID Report Descriptor
 //--------------------------------------------------------------------+
-/*
+
 uint8_t const desc_hid_report[] =
         {
                 TUD_HID_REPORT_DESC_GENERIC_INOUT(CFG_TUD_HID_BUFSIZE)
@@ -82,7 +82,7 @@ uint8_t const desc_hid_report[] =
 uint8_t const *tud_hid_descriptor_report_cb(void) {
     return desc_hid_report;
 }
-*/
+
 //--------------------------------------------------------------------+
 // Configuration Descriptor
 //--------------------------------------------------------------------+
@@ -93,19 +93,20 @@ enum {
 };
 */
 enum {
-    ITF_NUM_CDC_CMD,
-    ITF_NUM_CDC_DATA,
+    ITF_NUM_HID,
+    //ITF_NUM_CDC_CMD,
+    //ITF_NUM_CDC_DATA,
     ITF_NUM_TOTAL
 };
 
-//#define  CONFIG_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + TUD_HID_INOUT_DESC_LEN)
-#define CONFIG_TOTAL_LEN (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN)
+//#define  CONFIG_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + TUD_HID_INOUT_DESC_LEN + TUD_CDC_DESC_LEN)
+#define  CONFIG_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + TUD_HID_INOUT_DESC_LEN)
 
 #define EPNUM_HID   0x01
 
-#define USBD_CDC_EP_CMD (0x81)
-#define USBD_CDC_EP_OUT (0x02)
-#define USBD_CDC_EP_IN (0x82)
+#define USBD_CDC_EP_CMD (0x82)
+#define USBD_CDC_EP_OUT (0x03)
+#define USBD_CDC_EP_IN (0x83)
 #define USBD_CDC_CMD_MAX_SIZE (8)
 #define USBD_CDC_IN_OUT_MAX_SIZE (64)
 
@@ -115,11 +116,11 @@ uint8_t const desc_configuration[] =
                 TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 500),
 
                 // Interface number, string index, protocol, report descriptor len, EP In & Out address, size & polling interval
-                //TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID, 0, HID_PROTOCOL_NONE, sizeof(desc_hid_report), EPNUM_HID,
-                //                         0x80 | EPNUM_HID, CFG_TUD_HID_BUFSIZE, 5)
+                TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID, 0, HID_PROTOCOL_NONE, sizeof(desc_hid_report), EPNUM_HID,
+                                         0x80 | EPNUM_HID, CFG_TUD_HID_BUFSIZE, 5),
 
-                TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_CMD, 4, USBD_CDC_EP_CMD,
-        USBD_CDC_CMD_MAX_SIZE, USBD_CDC_EP_OUT, USBD_CDC_EP_IN, USBD_CDC_IN_OUT_MAX_SIZE),
+                //TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_CMD, 4, USBD_CDC_EP_CMD,
+                //USBD_CDC_CMD_MAX_SIZE, USBD_CDC_EP_OUT, USBD_CDC_EP_IN, USBD_CDC_IN_OUT_MAX_SIZE),
 
         };
 

@@ -128,7 +128,4 @@ void tud_hid_set_report_cb(uint8_t report_id, hid_report_type_t report_type, uin
         }
         memcpy(dmx_values[0] + (32 * buffer[0]), buffer + 1, datasize);
     }
-
-    // echo back anything we received from host
-    //tud_hid_report(0, buffer, bufsize);
 }

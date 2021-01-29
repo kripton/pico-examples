@@ -130,7 +130,7 @@ char const *string_desc_arr[] =
 {
     (const char[]) {0x09, 0x04}, // 0: is supported language is English (0x0409)
     "DE/FX5 Clone",              // 1: Manufacturer
-    "16Tx 0Rx",                  // 2: Product
+    "16Tx 00Rx",                 // 2: Product
     "HEXADEC_000001",            // 3: Serials, should use chip ID
     "DebugCDC"                   // 4: CDC interface name
 };

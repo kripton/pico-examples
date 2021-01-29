@@ -29,7 +29,7 @@ void tud_hid_set_report_cb(uint8_t report_id, hid_report_type_t report_type, uin
     // 0..15: DMX data (universe 0) at offset n*32
     // 16: Set interface mode (Command + 1 byte)
     // 32: Set universe extended
-    //     Second byte: 4 bit universe ID (0-15) + bit offset)
+    //     Second byte: 4 bit universe ID (0-15) + 4 bit offset)
     //     Followed by 60 data bytes
 
     if (buffer[0] < 16) {

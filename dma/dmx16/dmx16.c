@@ -15,11 +15,11 @@
 // Once the channel has sent a predetermined amount of data (1 DMX packet), it
 // will halt, and raise an interrupt flag. The processor will enter the 
 // interrupt handler in response to this, where it will:
-// - Toggle GP28 HIGH
+// - Toggle GP28 LOW
 // - Zero the complete wave table
 // - Prepare the next DMX packet to be sent in the wavetable
-// - Sets GP28 LOW (so we can trigger a scope on it)
-// - Restarts the DMA channel
+// - Sets GP28 HIGH (so we can trigger a scope on it)
+// - Restart the DMA channel
 // This repeats.
 
 #include <stdio.h>
@@ -33,6 +33,8 @@
 #include "stdio.h"
 
 #include "dmahandler.h"
+
+#include "acminterface.h"
 
 #include "bsp/board.h"          // LED timing
 #include <tusb.h>
@@ -137,6 +139,9 @@ void led_blinking_task(void) {
     // Blink every interval ms
     if (board_millis() - start_ms < blink_interval_ms) return; // not enough time
     start_ms += blink_interval_ms;
+
+    debugPrintUniverse(0);
+    debugPrintUniverse(1);
 
     board_led_write(led_state);
     led_state = 1 - led_state; // toggle

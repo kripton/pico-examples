@@ -2,6 +2,7 @@ add_executable(dmx16
         dmahandler.c
         dmx16.c
         usb_descriptors.c
+        stdio_usb.c
         )
 
 pico_generate_pio_header(dmx16 ${CMAKE_CURRENT_LIST_DIR}/dmx16.pio)

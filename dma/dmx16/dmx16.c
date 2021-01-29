@@ -29,6 +29,9 @@
 #include "hardware/irq.h"       // To control the data transfer from mem to pio
 #include "dmx16.pio.h"          // Header file for the PIO program
 
+#include "pico/stdlib.h"
+#include "stdio.h"
+
 #include "dmahandler.h"
 
 #include "bsp/board.h"          // LED timing
@@ -54,6 +57,8 @@ int main() {
     gpio_set_dir(25, GPIO_OUT);
 
     tusb_init();
+
+    stdio_usb_init();
 
     // Set up our TRIGGER GPIO on GP28 and init it to LOW
     gpio_init(PIN_TRIGGER);
@@ -129,6 +134,9 @@ void tud_hid_set_report_cb(uint8_t report_id, hid_report_type_t report_type, uin
     // First byte in buffer: Command/Channel offset
     // 0..15: DMX data (universe 0) at offset n*32
     // 16: Set interface mode (Command + 1 byte)
+    // 32: Set universe extended
+    //     Second byte: 4 bit universe ID (0-15) + bit offset)
+    //     Followed by 60 data bytes
 
     if (buffer[0] < 16) {
         // DMX data, universe 0
@@ -137,6 +145,15 @@ void tud_hid_set_report_cb(uint8_t report_id, hid_report_type_t report_type, uin
             datasize = bufsize - 1;
         }
         memcpy(dmx_values[0] + (32 * buffer[0]), buffer + 1, datasize);
+    } else if (buffer[0] == 32) {
+        uint8_t uni = (buffer[1] >> 4) & 0xF;
+        uint8_t offset = buffer[1] & 0xF;
+
+        uint8_t datasize = 60;
+        if ((bufsize - 2) < datasize) {
+            datasize = bufsize - 1;
+        }
+        memcpy(dmx_values[uni] + (60 * offset), buffer + 2, datasize);
     }
 }
 

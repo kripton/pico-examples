@@ -1,6 +1,7 @@
 add_executable(dmx16
         dmahandler.c
         dmx16.c
+        hidinterface.c
         usb_descriptors.c
         stdio_usb.c
         )

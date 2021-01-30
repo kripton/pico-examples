@@ -87,12 +87,12 @@ enum {
 
 #define  CONFIG_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + TUD_HID_INOUT_DESC_LEN + TUD_CDC_DESC_LEN)
 
-#define EPNUM_HID_OUT            0x01
+#define EPNUM_HID_OUT            0x02
 #define EPNUM_HID_IN             0x81
 
-#define USBD_CDC_EP_CMD          0x82
-#define USBD_CDC_EP_OUT          0x03
-#define USBD_CDC_EP_IN           0x83
+#define USBD_CDC_EP_CMD          0x83
+#define USBD_CDC_EP_OUT          0x04
+#define USBD_CDC_EP_IN           0x84
 #define USBD_CDC_CMD_MAX_SIZE       8
 #define USBD_CDC_IN_OUT_MAX_SIZE   64
 

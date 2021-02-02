@@ -47,10 +47,12 @@
 enum {
     BLINK_SENDING_ZERO         = 1000,
     BLINK_SENDING_CONTENT_ONE  =  500,
-    BLINK_SENDING_CONTENT_MORE =  250,
+    BLINK_SENDING_CONTENT_MORE =  100,
 };
 
 static uint32_t blink_interval_ms = BLINK_SENDING_ZERO;
+
+static uint32_t debug_refresh_interval_ms = 1000;
 
 void led_blinking_task(void);
 
@@ -126,7 +128,7 @@ void led_blinking_task(void) {
     }
     // Check the other universes
     for (uint16_t j = 1; j < 16; j++) {
-        for (uint16_t i; i < 512; i++) {
+        for (uint16_t i = 0; i < 512; i++) {
             if (dmx_values[j][i]) {
                 blink_interval_ms = BLINK_SENDING_CONTENT_MORE;
             }
@@ -140,9 +142,16 @@ void led_blinking_task(void) {
     if (board_millis() - start_ms < blink_interval_ms) return; // not enough time
     start_ms += blink_interval_ms;
 
-    debugPrintUniverse(0);
-    debugPrintUniverse(1);
-
     board_led_write(led_state);
     led_state = 1 - led_state; // toggle
+
+
+    // Output current DMX universe values periodically
+    static uint32_t start_ms_debug = 0;
+
+    if (board_millis() - start_ms_debug < debug_refresh_interval_ms) return; // not enough time
+    start_ms_debug += debug_refresh_interval_ms;
+
+    debugPrintUniverse(0);
+    debugPrintUniverse(1);
 }

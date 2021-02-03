@@ -13,6 +13,7 @@ target_include_directories(dmx16 PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
 target_link_libraries(dmx16
         pico_stdlib
+        pico_unique_id
         pico_mem_ops
         tinyusb_device
         tinyusb_board

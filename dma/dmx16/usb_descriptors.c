@@ -25,6 +25,9 @@
 
 #include "tusb.h"
 
+#include "pico/stdlib.h"
+#include "pico/unique_id.h"
+
 #define USB_VID 0x16C0
 #define USB_PID 0x088B
 
@@ -131,7 +134,7 @@ char const *string_desc_arr[] =
     (const char[]) {0x09, 0x04}, // 0: is supported language is English (0x0409)
     "DE/FX5/U1 Clone",           // 1: Manufacturer
     "16Tx 00Rx S",               // 2: Product
-    "RP2040_000001",             // 3: Serial, should use chip ID. TODO
+    "RP2040_0123456789ABCDEF",   // 3: Serial, fallback here, it's dynamically created later
     "16Tx00RxS_000001"           // 4: CDC interface name
 };
 
@@ -141,8 +144,23 @@ static uint16_t _desc_str[32];
 // Application return pointer to descriptor, whose contents must exist long enough for transfer to complete
 uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
     (void) langid;
-
+    char *str = NULL;
     uint8_t chr_count;
+
+    if (index == 3) {
+        // Serial number has been requested, construct it from the unique board id
+        pico_unique_board_id_t board_id;
+        pico_get_unique_board_id(&board_id);
+
+        char serial[33];
+        str = serial;
+
+        snprintf(serial, 32, "RP2040_");
+
+        for (int i = 0; (i < PICO_UNIQUE_BOARD_ID_SIZE_BYTES) && (i < 8); ++i) {
+            snprintf(serial + i*2 + 7, 32, "%02x", board_id.id[i]);
+        }
+    }
 
     if (index == 0) {
         memcpy(&_desc_str[1], string_desc_arr[0], 2);
@@ -152,7 +170,9 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
 
         if (!(index < sizeof(string_desc_arr) / sizeof(string_desc_arr[0]))) return NULL;
 
-        const char *str = string_desc_arr[index];
+        if (str == NULL) {
+            str = string_desc_arr[index];
+        }
 
         // Cap at max char
         chr_count = strlen(str);
